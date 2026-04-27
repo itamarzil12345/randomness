@@ -11,6 +11,7 @@ import type { Person } from "../types/person.js";
 import { connectionEntity } from "./connectionEntity.js";
 import { enrichmentEntity } from "./enrichmentEntity.js";
 import { peopleEntity, type StoredPerson } from "./peopleEntity.js";
+import { settingEntity } from "./settingEntity.js";
 
 const dataPath = path.join(process.cwd(), DATA_DIRECTORY);
 const sqlitePath = path.join(dataPath, SQLITE_FILE);
@@ -37,7 +38,7 @@ const createDataSource = (): DataSource =>
     location: sqlitePath,
     autoSave: true,
     synchronize: true,
-    entities: [peopleEntity, connectionEntity, enrichmentEntity],
+    entities: [peopleEntity, connectionEntity, enrichmentEntity, settingEntity],
   });
 
 const migrateLegacyPeople = async (source: DataSource): Promise<void> => {

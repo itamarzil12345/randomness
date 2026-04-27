@@ -1,4 +1,3 @@
-import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import SaveIcon from "@mui/icons-material/Save";
@@ -13,7 +12,6 @@ type ProfileActionsProps = {
   onSave: () => void;
   onDelete: () => void;
   onUpdate: () => void;
-  onBack: () => void;
 };
 
 export const ProfileActions = ({
@@ -24,7 +22,6 @@ export const ProfileActions = ({
   onSave,
   onDelete,
   onUpdate,
-  onBack,
 }: ProfileActionsProps): JSX.Element => (
   <Stack direction={{ sm: "row", xs: "column" }} spacing={1.5}>
     {canSave ? (
@@ -49,9 +46,6 @@ export const ProfileActions = ({
       variant="secondary"
     >
       Update Profile
-    </Button>
-    <Button onClick={onBack} startIcon={<ArrowBackIcon />} variant="secondary">
-      Back
     </Button>
   </Stack>
 );

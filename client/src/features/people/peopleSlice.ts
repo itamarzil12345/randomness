@@ -8,6 +8,14 @@ import {
 } from "../../api/peopleApi";
 import { MAX_RANDOM_USERS, RANDOM_USER_PAGE_SIZE } from "../../constants";
 import type { Person, PersonName } from "../../types/person";
+import {
+  DEFAULT_RANDOM_USER_API_URL,
+  RANDOM_USER_API_KEY,
+} from "../settings/settingsSlice";
+
+type SettingsLikeState = {
+  byKey: Record<string, string>;
+};
 
 type LoadingKey = "random" | "saved" | "mutation";
 
@@ -46,10 +54,13 @@ type RandomFetchResult = {
 export const fetchRandomPeople = createAsyncThunk<
   RandomFetchResult,
   { append?: boolean } | undefined,
-  { state: { people: PeopleState } }
+  { state: { people: PeopleState; settings: SettingsLikeState } }
 >("people/fetchRandom", async (arg, { getState }) => {
   const append = arg?.append ?? false;
-  const { randomPage, randomSeed, randomPeople } = getState().people;
+  const state = getState();
+  const { randomPage, randomSeed, randomPeople } = state.people;
+  const baseUrl =
+    state.settings?.byKey?.[RANDOM_USER_API_KEY] ?? DEFAULT_RANDOM_USER_API_URL;
   const seed = append && randomSeed ? randomSeed : makeSeed();
   const page = append ? randomPage + 1 : 1;
   const remaining = append ? MAX_RANDOM_USERS - randomPeople.length : MAX_RANDOM_USERS;
@@ -59,7 +70,7 @@ export const fetchRandomPeople = createAsyncThunk<
     return { people: [], page: randomPage, seed: randomSeed, reset: false };
   }
 
-  const people = await fetchRandomPeoplePageApi({ page, seed, pageSize });
+  const people = await fetchRandomPeoplePageApi({ page, seed, pageSize, baseUrl });
   return { people, page, seed, reset: !append };
 });
 
@@ -116,6 +127,11 @@ const peopleSlice = createSlice({
     ) {
       updatePersonName(state.randomPeople, action.payload.id, action.payload.name);
     },
+    resetRandomPeople(state) {
+      state.randomPeople = [];
+      state.randomPage = 0;
+      state.randomSeed = "";
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -161,5 +177,5 @@ const peopleSlice = createSlice({
   },
 });
 
-export const { updateRandomPersonName } = peopleSlice.actions;
+export const { updateRandomPersonName, resetRandomPeople } = peopleSlice.actions;
 export const peopleReducer = peopleSlice.reducer;

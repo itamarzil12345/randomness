@@ -13,14 +13,17 @@ export type FetchRandomPeopleArgs = {
   page: number;
   seed: string;
   pageSize?: number;
+  baseUrl?: string;
 };
 
 export const fetchRandomPeoplePageApi = async ({
   page,
   seed,
   pageSize = RANDOM_USER_PAGE_SIZE,
+  baseUrl = RANDOM_USER_API_URL,
 }: FetchRandomPeopleArgs): Promise<Person[]> => {
-  const url = `${RANDOM_USER_API_URL}?results=${pageSize}&page=${page}&seed=${encodeURIComponent(seed)}`;
+  const separator = baseUrl.includes("?") ? "&" : "?";
+  const url = `${baseUrl}${separator}results=${pageSize}&page=${page}&seed=${encodeURIComponent(seed)}`;
   const data = await requestJson<RandomUserResponse>(url);
   return data.results.map(mapRandomUser);
 };

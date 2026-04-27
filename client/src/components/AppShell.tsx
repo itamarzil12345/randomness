@@ -583,45 +583,14 @@ const Sidebar = (): JSX.Element => {
     >
       <Box sx={{ display: "flex", flexDirection: "column", height: "100%" }}>
         {!collapsed ? (
-          <Box sx={{ px: 2, py: 1.5 }}>
-            <Typography variant="overline" sx={{ color: "text.secondary" }}>
-              Workspace
-            </Typography>
-            <Typography sx={{ fontWeight: 700, fontSize: 14 }}>People Registry</Typography>
-            <Typography variant="caption" sx={{ color: "text.secondary" }}>
-              {sectionLabel}
-            </Typography>
-          </Box>
-        ) : (
-          <Box sx={{ height: 12 }} />
-        )}
-        <Divider />
-        <Box sx={{ flex: 1, overflowY: "auto" }}>
-          <NavSection title="Workspaces" items={workspaceItems} collapsed={collapsed} />
-          <Divider sx={{ mx: collapsed ? 1 : 2 }} />
-          <NavSection title="Intelligence" items={intelligenceItems} collapsed={collapsed} />
-          <Divider sx={{ mx: collapsed ? 1 : 2 }} />
-          <NavSection title="Agents" items={agentItems} collapsed={collapsed} />
-        </Box>
-        <Divider />
-        {!collapsed ? (
-          <Box sx={{ p: 2, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <Box sx={{ px: 2, py: 1.5, display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
             <Box>
-              <Typography
-                variant="caption"
-                sx={{ color: "text.secondary", display: "block" }}
-              >
-                Source · randomuser.me
+              <Typography variant="overline" sx={{ color: "text.secondary" }}>
+                Workspace
               </Typography>
-              <Typography
-                sx={{
-                  fontFamily: "JetBrains Mono, monospace",
-                  fontSize: 10,
-                  color: "text.secondary",
-                  opacity: 0.7,
-                }}
-              >
-                v0.4.2 · build 4f3a
+              <Typography sx={{ fontWeight: 700, fontSize: 14 }}>People Registry</Typography>
+              <Typography variant="caption" sx={{ color: "text.secondary" }}>
+                {sectionLabel}
               </Typography>
             </Box>
             <Tooltip title="Collapse sidebar">
@@ -639,32 +608,70 @@ const Sidebar = (): JSX.Element => {
             </Tooltip>
           </Box>
         )}
+        <Divider />
+        <Box sx={{ flex: 1, overflowY: "auto" }}>
+          <NavSection title="Workspaces" items={workspaceItems} collapsed={collapsed} />
+          <Divider sx={{ mx: collapsed ? 1 : 2 }} />
+          <NavSection title="Intelligence" items={intelligenceItems} collapsed={collapsed} />
+          <Divider sx={{ mx: collapsed ? 1 : 2 }} />
+          <NavSection title="Agents" items={agentItems} collapsed={collapsed} />
+        </Box>
+        <Divider />
+        {!collapsed ? (
+          <Box sx={{ p: 2 }}>
+            <Typography
+              variant="caption"
+              sx={{ color: "text.secondary", display: "block" }}
+            >
+              Source · randomuser.me
+            </Typography>
+            <Typography
+              sx={{
+                fontFamily: "JetBrains Mono, monospace",
+                fontSize: 10,
+                color: "text.secondary",
+                opacity: 0.7,
+              }}
+            >
+              v0.4.2 · build 4f3a
+            </Typography>
+          </Box>
+        ) : (
+          <Box sx={{ p: 1, display: "flex", justifyContent: "center" }}>
+            <Tooltip title="Source · randomuser.me" placement="right">
+              <Box
+                sx={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  bgcolor: "success.main",
+                  boxShadow: (t) => `0 0 6px ${t.palette.success.main}`,
+                }}
+              />
+            </Tooltip>
+          </Box>
+        )}
       </Box>
     </Drawer>
   );
 };
 
-export const AppShell = ({ children }: { children: ReactNode }): JSX.Element => {
-  const { collapsed } = useSidebar();
-  const navWidth = collapsed ? NAV_WIDTH_COLLAPSED : NAV_WIDTH;
-  return (
-    <Box sx={{ display: "flex", minHeight: "100vh" }}>
-      <TopBar />
-      <Sidebar />
-      <Box
-        component="main"
-        sx={{
-          flex: 1,
-          ml: `${navWidth}px`,
-          mt: `${TOPBAR_HEIGHT}px`,
-          minHeight: `calc(100vh - ${TOPBAR_HEIGHT}px)`,
-          display: "flex",
-          flexDirection: "column",
-          transition: "margin-left 0.18s ease",
-        }}
-      >
-        {children}
-      </Box>
+export const AppShell = ({ children }: { children: ReactNode }): JSX.Element => (
+  <Box sx={{ display: "flex", minHeight: "100vh" }}>
+    <TopBar />
+    <Sidebar />
+    <Box
+      component="main"
+      sx={{
+        flex: 1,
+        minWidth: 0,
+        mt: `${TOPBAR_HEIGHT}px`,
+        minHeight: `calc(100vh - ${TOPBAR_HEIGHT}px)`,
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {children}
     </Box>
-  );
-};
+  </Box>
+);

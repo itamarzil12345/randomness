@@ -189,23 +189,31 @@ export const ProfilePage = (): JSX.Element => {
   };
 
   return (
-    <PageShell title={toFullName(name)} subtitle={person.email}>
-      <Box sx={{ mb: 2 }}>
+    <PageShell
+      title={toFullName(name)}
+      subtitle={person.email}
+      fullHeight
+      topActions={
         <Button
           variant="secondary"
           startIcon={<ArrowBackIcon />}
           onClick={() => navigate(backRoute)}
-          sx={{ minHeight: 32, fontSize: 13, px: 1.5 }}
+          sx={{ minHeight: 36, fontSize: 13, px: 1.75 }}
         >
           Back to {origin === "saved" ? "Saved" : "People"}
         </Button>
-      </Box>
+      }
+    >
       <Box
         sx={{
+          flex: 1,
+          minHeight: 0,
+          overflow: "auto",
           display: "grid",
-          gap: 3,
-          gridTemplateColumns: { lg: "320px 1fr", xs: "1fr" },
+          gap: 2.5,
+          gridTemplateColumns: { lg: "340px minmax(0, 1fr)", xs: "1fr" },
           alignItems: "start",
+          width: "100%",
         }}
       >
         {/* Left rail — subject card */}
@@ -287,7 +295,7 @@ export const ProfilePage = (): JSX.Element => {
           </Paper>
 
           {/* Run intel panel */}
-          <Paper sx={{ p: 2.5 }}>
+          <Paper sx={{ p: 2 }}>
             <Stack direction="row" spacing={1} sx={{ alignItems: "center", mb: 1 }}>
               <AutoAwesomeIcon sx={{ color: "primary.main", fontSize: 18 }} />
               <Typography sx={{ fontWeight: 700 }}>Run intel</Typography>
@@ -344,53 +352,15 @@ export const ProfilePage = (): JSX.Element => {
               })}
             </Stack>
           </Paper>
-        </Stack>
 
-        {/* Main column */}
-        <Stack spacing={3}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="overline" sx={{ color: "text.secondary" }}>
-              Identification
-            </Typography>
-            <Box sx={{ mt: 1.5 }}>
-              <ProfileForm
-                name={name}
-                onChange={setName}
-                onSubmit={() => void handleUpdate()}
-              />
-            </Box>
-            <Divider sx={{ my: 2.5 }} />
-            <Typography variant="overline" sx={{ color: "text.secondary" }}>
-              Attributes
-            </Typography>
-            <Box sx={{ mt: 1.5 }}>
-              <InfoGrid items={getProfileItems(person)} />
-            </Box>
-            {error ? (
-              <Box sx={{ mt: 2 }}>
-                <StatusMessage message={error} tone="error" />
-              </Box>
-            ) : null}
-            <Divider sx={{ my: 2.5 }} />
-            <ProfileActions
-              canSave={canSave}
-              canUpdate={isDirty}
-              isLoading={loading.mutation}
-              isSavedProfile={isSavedProfile}
-              onBack={() => navigate(backRoute)}
-              onDelete={() => void handleDelete()}
-              onSave={() => void handleSave()}
-              onUpdate={() => void handleUpdate()}
-            />
-          </Paper>
-
-          <Paper sx={{ p: 3 }}>
+          {/* Enrichments panel — left rail */}
+          <Paper sx={{ p: 2 }}>
             <Stack direction="row" spacing={1} sx={{ alignItems: "center", mb: 1 }}>
               <Typography variant="overline" sx={{ color: "text.secondary" }}>
                 Enrichments
               </Typography>
               <Chip
-                label={`${enrichments.length} signal${enrichments.length === 1 ? "" : "s"}`}
+                label={`${enrichments.length}`}
                 size="small"
                 sx={{
                   fontFamily: "JetBrains Mono, monospace",
@@ -401,13 +371,11 @@ export const ProfilePage = (): JSX.Element => {
             </Stack>
             {enrichments.length === 0 ? (
               <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                No scrapers have run on this subject yet.{" "}
-                {isSavedProfile
-                  ? "Trigger one from the Run intel panel."
-                  : "Save the profile to enable scrapers."}
+                No scrapers have run yet.{" "}
+                {isSavedProfile ? "Trigger one above." : "Save first to enable scrapers."}
               </Typography>
             ) : (
-              <Stack divider={<Divider />} spacing={2.5} sx={{ mt: 1.5 }}>
+              <Stack divider={<Divider />} spacing={2} sx={{ mt: 1 }}>
                 {scrapers.map((scraper) => {
                   const enrichment = enrichmentByScraper.get(scraper.id);
                   if (!enrichment) return null;
@@ -415,12 +383,12 @@ export const ProfilePage = (): JSX.Element => {
                     <Box key={scraper.id}>
                       <Stack
                         direction="row"
-                        spacing={1.5}
-                        sx={{ alignItems: "center", mb: 1.5 }}
+                        spacing={1}
+                        sx={{ alignItems: "center", mb: 1 }}
                       >
                         <Box sx={{ color: "primary.main" }}>{scraperIcon(scraper.id)}</Box>
-                        <Box sx={{ flex: 1 }}>
-                          <Typography sx={{ fontWeight: 700, fontSize: 14 }}>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography sx={{ fontWeight: 700, fontSize: 12 }} noWrap>
                             {scraper.label}
                           </Typography>
                           <Typography
@@ -429,8 +397,9 @@ export const ProfilePage = (): JSX.Element => {
                               fontSize: 10,
                               color: "text.secondary",
                             }}
+                            noWrap
                           >
-                            {scraper.source} · {formatRelative(enrichment.runAt)}
+                            {formatRelative(enrichment.runAt)}
                           </Typography>
                         </Box>
                       </Stack>
@@ -442,6 +411,42 @@ export const ProfilePage = (): JSX.Element => {
             )}
           </Paper>
         </Stack>
+
+        {/* Main column */}
+        <Paper sx={{ p: 3, height: "100%" }}>
+          <Typography variant="overline" sx={{ color: "text.secondary" }}>
+            Identification
+          </Typography>
+          <Box sx={{ mt: 1.5 }}>
+            <ProfileForm
+              name={name}
+              onChange={setName}
+              onSubmit={() => void handleUpdate()}
+            />
+          </Box>
+          <Divider sx={{ my: 2.5 }} />
+          <Typography variant="overline" sx={{ color: "text.secondary" }}>
+            Attributes
+          </Typography>
+          <Box sx={{ mt: 1.5 }}>
+            <InfoGrid items={getProfileItems(person)} />
+          </Box>
+          {error ? (
+            <Box sx={{ mt: 2 }}>
+              <StatusMessage message={error} tone="error" />
+            </Box>
+          ) : null}
+          <Divider sx={{ my: 2.5 }} />
+          <ProfileActions
+            canSave={canSave}
+            canUpdate={isDirty}
+            isLoading={loading.mutation}
+            isSavedProfile={isSavedProfile}
+            onDelete={() => void handleDelete()}
+            onSave={() => void handleSave()}
+            onUpdate={() => void handleUpdate()}
+          />
+        </Paper>
       </Box>
     </PageShell>
   );

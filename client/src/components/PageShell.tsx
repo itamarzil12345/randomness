@@ -8,6 +8,7 @@ type PageShellProps = {
   fullHeight?: boolean;
   eyebrow?: string;
   actions?: ReactNode;
+  topActions?: ReactNode;
 };
 
 export const PageShell = ({
@@ -17,6 +18,7 @@ export const PageShell = ({
   fullHeight = false,
   eyebrow,
   actions,
+  topActions,
 }: PageShellProps): JSX.Element => (
   <Box
     sx={
@@ -25,14 +27,18 @@ export const PageShell = ({
             display: "flex",
             flexDirection: "column",
             flex: 1,
-            px: 4,
-            py: 3,
+            px: { xs: 2, md: 3 },
+            py: 2.5,
             overflow: "hidden",
+            width: "100%",
           }
-        : { px: 4, py: 4, flex: 1 }
+        : { px: { xs: 2, md: 3 }, py: 3, flex: 1, width: "100%" }
     }
   >
-    <Box component="header" sx={{ mb: 3, flexShrink: 0 }}>
+    {topActions ? (
+      <Box sx={{ mb: 1.5, flexShrink: 0 }}>{topActions}</Box>
+    ) : null}
+    <Box component="header" sx={{ mb: 2.5, flexShrink: 0 }}>
       <Stack
         direction={{ xs: "column", md: "row" }}
         spacing={2}
