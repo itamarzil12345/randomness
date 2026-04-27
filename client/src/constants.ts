@@ -16,3 +16,4 @@ export const ProfileSource = {
 } as const;
 
 export const EMPTY_FILTER_VALUE = "";
+export const PROFILE_ORIGIN_PARAM = "from";

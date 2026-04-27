@@ -9,7 +9,7 @@ import { StatusMessage } from "../components/StatusMessage";
 import { AppRoute, EMPTY_FILTER_VALUE } from "../constants";
 import { fetchSavedPeople } from "../features/people/peopleSlice";
 import type { ProfileSourceType } from "../types/person";
-import { filterPeople } from "../utils/person";
+import { filterPeople, mergeSavedPeopleFirst } from "../utils/person";
 
 type PeopleListPageProps = {
   source: ProfileSourceType;
@@ -24,14 +24,20 @@ export const PeopleListPage = ({ source }: PeopleListPageProps): JSX.Element => 
     (state) => state.people,
   );
   const isSavedSource = source === "saved";
-  const people = isSavedSource ? savedPeople : randomPeople;
   const title = isSavedSource ? "Saved Profiles" : "Random Profiles";
+  const people = useMemo(() => {
+    if (isSavedSource) {
+      return savedPeople;
+    }
+
+    return mergeSavedPeopleFirst(randomPeople, savedPeople);
+  }, [isSavedSource, randomPeople, savedPeople]);
 
   useEffect(() => {
-    if (isSavedSource && savedPeople.length === 0) {
+    if (savedPeople.length === 0) {
       void dispatch(fetchSavedPeople());
     }
-  }, [dispatch, isSavedSource, savedPeople.length]);
+  }, [dispatch, savedPeople.length]);
 
   const filteredPeople = useMemo(
     () => filterPeople(people, nameFilter, countryFilter),
@@ -58,7 +64,7 @@ export const PeopleListPage = ({ source }: PeopleListPageProps): JSX.Element => 
       {!loading.saved && filteredPeople.length === 0 ? (
         <StatusMessage message="No profiles to display." />
       ) : (
-        <PeopleList people={filteredPeople} source={source} />
+        <PeopleList people={filteredPeople} origin={source} />
       )}
     </PageShell>
   );

@@ -1,13 +1,14 @@
 import { useNavigate } from "react-router-dom";
-import type { ProfileSourceType, Person } from "../types/person";
+import { PROFILE_ORIGIN_PARAM } from "../constants";
+import type { Person, ProfileSourceType } from "../types/person";
 import { toFullName } from "../utils/person";
 
 type PeopleListProps = {
   people: Person[];
-  source: ProfileSourceType;
+  origin: ProfileSourceType;
 };
 
-export const PeopleList = ({ people, source }: PeopleListProps): JSX.Element => {
+export const PeopleList = ({ people, origin }: PeopleListProps): JSX.Element => {
   const navigate = useNavigate();
 
   return (
@@ -16,7 +17,9 @@ export const PeopleList = ({ people, source }: PeopleListProps): JSX.Element => 
         <button
           className="person-row"
           key={person.id}
-          onClick={() => navigate(`/profile/${source}/${person.id}`)}
+          onClick={() =>
+            navigate(`/profile/${person.source}/${person.id}?${PROFILE_ORIGIN_PARAM}=${origin}`)
+          }
           role="listitem"
         >
           <img src={person.picture.thumbnail} alt={toFullName(person.name)} />

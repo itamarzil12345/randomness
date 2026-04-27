@@ -42,3 +42,15 @@ export const filterPeople = (
     return nameMatches && countryMatches;
   });
 };
+
+export const mergeSavedPeopleFirst = (
+  randomPeople: Person[],
+  savedPeople: Person[],
+): Person[] => {
+  const savedIds = new Set(savedPeople.map((person) => person.id));
+  const unsavedRandomPeople = randomPeople.filter(
+    (person) => !savedIds.has(person.id),
+  );
+
+  return [...savedPeople, ...unsavedRandomPeople];
+};

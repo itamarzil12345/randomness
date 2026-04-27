@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
 import { Button } from "../components/Button";
 import { InfoGrid } from "../components/InfoGrid";
 import { PageShell } from "../components/PageShell";
 import { ProfileForm } from "../components/ProfileForm";
 import { StatusMessage } from "../components/StatusMessage";
-import { AppRoute } from "../constants";
+import { AppRoute, PROFILE_ORIGIN_PARAM } from "../constants";
 import {
   deleteSavedPerson,
   fetchSavedPeople,
@@ -23,6 +23,7 @@ const isProfileSource = (value: string | undefined): value is ProfileSourceType 
 
 export const ProfilePage = (): JSX.Element => {
   const { source, id } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { randomPeople, savedPeople, loading, error } = useAppSelector(
@@ -63,7 +64,8 @@ export const ProfilePage = (): JSX.Element => {
   }
 
   const isSavedProfile = source === "saved";
-  const backRoute = isSavedProfile ? AppRoute.savedPeople : AppRoute.randomPeople;
+  const origin = searchParams.get(PROFILE_ORIGIN_PARAM);
+  const backRoute = origin === "saved" ? AppRoute.savedPeople : AppRoute.randomPeople;
   const isAlreadySaved = savedPeople.some((savedPerson) => savedPerson.id === id);
   const canSave = !isSavedProfile && !isAlreadySaved;
 
