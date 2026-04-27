@@ -8,6 +8,8 @@ import {
   SQLITE_FILE,
 } from "../constants.js";
 import type { Person } from "../types/person.js";
+import { connectionEntity } from "./connectionEntity.js";
+import { enrichmentEntity } from "./enrichmentEntity.js";
 import { peopleEntity, type StoredPerson } from "./peopleEntity.js";
 
 const dataPath = path.join(process.cwd(), DATA_DIRECTORY);
@@ -35,7 +37,7 @@ const createDataSource = (): DataSource =>
     location: sqlitePath,
     autoSave: true,
     synchronize: true,
-    entities: [peopleEntity],
+    entities: [peopleEntity, connectionEntity, enrichmentEntity],
   });
 
 const migrateLegacyPeople = async (source: DataSource): Promise<void> => {

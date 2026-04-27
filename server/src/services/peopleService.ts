@@ -1,14 +1,18 @@
 import { peopleRepository } from "../db/peopleRepository.js";
 import type { Person, PersonName } from "../types/person.js";
 import { NotFoundError } from "../utils/errors.js";
+import { connectionService } from "./connectionService.js";
+import { enrichmentService } from "./enrichmentService.js";
 
 export const peopleService = {
   list(): Promise<Person[]> {
     return peopleRepository.list();
   },
 
-  save(person: Person): Promise<Person> {
-    return peopleRepository.save(person);
+  async save(person: Person): Promise<Person> {
+    const saved = await peopleRepository.save(person);
+    await connectionService.autoLinkOnSave(saved);
+    return saved;
   },
 
   async updateName(id: string, name: PersonName): Promise<Person> {
@@ -27,5 +31,8 @@ export const peopleService = {
     if (!deleted) {
       throw new NotFoundError("Person was not found");
     }
+
+    await connectionService.deleteByPerson(id);
+    await enrichmentService.deleteByPerson(id);
   },
 };

@@ -1,19 +1,17 @@
 import { Box, CircularProgress, Pagination, Stack } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
-import { Button } from "../components/Button";
 import { Filters } from "../components/Filters";
 import { PageShell } from "../components/PageShell";
 import { PeopleList } from "../components/PeopleList";
 import { StatusMessage } from "../components/StatusMessage";
 import {
-  AppRoute,
   EMPTY_FILTER_VALUE,
   MAX_RANDOM_USERS,
   RANDOM_USER_PAGE_SIZE,
 } from "../constants";
 import { fetchRandomPeople, fetchSavedPeople } from "../features/people/peopleSlice";
+import { fetchConnections } from "../features/connections/connectionsSlice";
 import type { ProfileSourceType } from "../types/person";
 import { filterPeople, mergeSavedPeopleFirst } from "../utils/person";
 
@@ -25,13 +23,15 @@ export const PeopleListPage = ({ source }: PeopleListPageProps): JSX.Element => 
   const [nameFilter, setNameFilter] = useState(EMPTY_FILTER_VALUE);
   const [countryFilter, setCountryFilter] = useState(EMPTY_FILTER_VALUE);
   const dispatch = useAppDispatch();
-  const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const { randomPeople, savedPeople, loading, error } = useAppSelector(
     (state) => state.people,
   );
   const isSavedSource = source === "saved";
-  const title = isSavedSource ? "Saved Profiles" : "Random Profiles";
+  const title = isSavedSource ? "Saved" : "People";
+  const subtitle = isSavedSource
+    ? "Profiles you've saved."
+    : "Browse people. Open a profile to view details or save.";
   const people = useMemo(
     () =>
       isSavedSource ? savedPeople : mergeSavedPeopleFirst(randomPeople, savedPeople),
@@ -43,6 +43,17 @@ export const PeopleListPage = ({ source }: PeopleListPageProps): JSX.Element => 
       void dispatch(fetchSavedPeople());
     }
   }, [dispatch, savedPeople.length]);
+
+  useEffect(() => {
+    if (
+      !isSavedSource &&
+      randomPeople.length === 0 &&
+      !loading.random
+    ) {
+      void dispatch(fetchRandomPeople({ append: false }));
+      void dispatch(fetchConnections());
+    }
+  }, [dispatch, isSavedSource, loading.random, randomPeople.length]);
 
   useEffect(() => {
     setPage(1);
@@ -91,17 +102,8 @@ export const PeopleListPage = ({ source }: PeopleListPageProps): JSX.Element => 
   };
 
   return (
-    <PageShell
-      title={title}
-      subtitle="Filter profiles and open a row for details."
-      fullHeight
-    >
+    <PageShell title={title} subtitle={subtitle} fullHeight>
       <Stack spacing={2} sx={{ flexShrink: 0 }}>
-        <Stack direction="row" spacing={2}>
-          <Button variant="secondary" onClick={() => navigate(AppRoute.home)}>
-            Back
-          </Button>
-        </Stack>
         <Filters
           nameFilter={nameFilter}
           countryFilter={countryFilter}

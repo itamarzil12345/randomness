@@ -7,6 +7,7 @@ import {
   CLIENT_URL,
   HttpStatus,
 } from "./constants.js";
+import { connectionRouter } from "./routes/connectionRoutes.js";
 import { peopleRouter } from "./routes/peopleRoutes.js";
 import { NotFoundError } from "./utils/errors.js";
 
@@ -28,6 +29,7 @@ app.get(`${API_PREFIX}/health`, (_request, response) => {
 });
 
 app.use(`${API_PREFIX}/people`, peopleRouter);
+app.use(`${API_PREFIX}/connections`, connectionRouter);
 
 const errorHandler: ErrorRequestHandler = (error, _request, response, _next) => {
   if (error instanceof ZodError) {

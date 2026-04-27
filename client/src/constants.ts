@@ -7,9 +7,15 @@ export const MAX_RANDOM_USERS = 100;
 
 export const AppRoute = {
   home: "/",
-  randomPeople: "/random",
-  savedPeople: "/history",
+  randomPeople: "/",
+  savedPeople: "/saved",
+  graph: "/graph",
   profile: "/profile/:source/:id",
+} as const;
+
+export const APP_BRAND = {
+  shortName: "PIP",
+  fullName: "People Intelligence Platform",
 } as const;
 
 export const ProfileSource = {

@@ -1,7 +1,9 @@
 import { Router } from "express";
 import { HttpStatus } from "../constants.js";
+import { enrichmentService } from "../services/enrichmentService.js";
 import { peopleService } from "../services/peopleService.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { enrichmentInputSchema } from "../validation/enrichmentSchemas.js";
 import { personSchema, updateNameSchema } from "../validation/personSchemas.js";
 
 export const peopleRouter = Router();
@@ -37,5 +39,25 @@ peopleRouter.delete(
   asyncHandler(async (request, response) => {
     await peopleService.delete(request.params.id);
     response.status(HttpStatus.noContent).send();
+  }),
+);
+
+peopleRouter.get(
+  "/:id/enrichments",
+  asyncHandler(async (request, response) => {
+    const enrichments = await enrichmentService.list(request.params.id);
+    response.status(HttpStatus.ok).json(enrichments);
+  }),
+);
+
+peopleRouter.post(
+  "/:id/enrichments",
+  asyncHandler(async (request, response) => {
+    const input = enrichmentInputSchema.parse(request.body);
+    const enrichment = await enrichmentService.upsert(request.params.id, {
+      scraper: input.scraper,
+      payload: input.payload ?? null,
+    });
+    response.status(HttpStatus.ok).json(enrichment);
   }),
 );
