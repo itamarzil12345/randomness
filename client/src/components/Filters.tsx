@@ -1,3 +1,5 @@
+import { Box, Paper, TextField } from "@mui/material";
+
 type FiltersProps = {
   nameFilter: string;
   countryFilter: string;
@@ -11,22 +13,28 @@ export const Filters = ({
   onNameChange,
   onCountryChange,
 }: FiltersProps): JSX.Element => (
-  <section className="filters" aria-label="People filters">
-    <label>
-      Name
-      <input
-        value={nameFilter}
-        onChange={(event) => onNameChange(event.target.value)}
-        placeholder="Filter by name"
-      />
-    </label>
-    <label>
-      Country
-      <input
-        value={countryFilter}
-        onChange={(event) => onCountryChange(event.target.value)}
-        placeholder="Filter by country"
-      />
-    </label>
-  </section>
+  <Paper aria-label="People filters" component="section" sx={{ my: 3, p: 2 }}>
+    <Box
+      sx={{
+        display: "grid",
+        gap: 2,
+        gridTemplateColumns: { md: "1fr 1fr", xs: "1fr" },
+      }}
+    >
+        <TextField
+          fullWidth
+          label="Name"
+          value={nameFilter}
+          onChange={(event) => onNameChange(event.target.value)}
+          placeholder="Filter by name"
+        />
+        <TextField
+          fullWidth
+          label="Country"
+          value={countryFilter}
+          onChange={(event) => onCountryChange(event.target.value)}
+          placeholder="Filter by country"
+        />
+    </Box>
+  </Paper>
 );

@@ -1,3 +1,6 @@
+import DownloadIcon from "@mui/icons-material/Download";
+import HistoryIcon from "@mui/icons-material/History";
+import { Paper, Stack } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
 import { Button } from "../components/Button";
@@ -13,7 +16,7 @@ export const HomePage = (): JSX.Element => {
 
   const handleFetch = async (): Promise<void> => {
     try {
-      await dispatch(fetchRandomPeople()).unwrap();
+      await dispatch(fetchRandomPeople({ append: false })).unwrap();
       navigate(AppRoute.randomPeople);
     } catch {
       return;
@@ -31,18 +34,25 @@ export const HomePage = (): JSX.Element => {
 
   return (
     <PageShell title="People Browser" subtitle="Fetch random people or view history.">
-      <section className="home-actions">
-        <Button onClick={() => void handleFetch()} disabled={loading.random}>
+      <Paper sx={{ p: 3 }}>
+        <Stack direction={{ sm: "row", xs: "column" }} spacing={2}>
+          <Button
+            disabled={loading.random}
+            onClick={() => void handleFetch()}
+            startIcon={<DownloadIcon />}
+          >
           {loading.random ? "Fetching..." : "Fetch"}
         </Button>
-        <Button
-          variant="secondary"
-          onClick={() => void handleHistory()}
-          disabled={loading.saved}
-        >
+          <Button
+            variant="secondary"
+            onClick={() => void handleHistory()}
+            disabled={loading.saved}
+            startIcon={<HistoryIcon />}
+          >
           {loading.saved ? "Loading..." : "History"}
         </Button>
-      </section>
+        </Stack>
+      </Paper>
       {error ? <StatusMessage message={error} tone="error" /> : null}
     </PageShell>
   );

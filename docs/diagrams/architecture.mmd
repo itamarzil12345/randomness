@@ -1,0 +1,7 @@
+flowchart LR
+  User[User] --> Client[React Client]
+  Client --> RandomUser[randomuser.me API]
+  Client --> Backend[Express API]
+  Backend --> Service[People Service]
+  Service --> Repository[TypeORM Repository]
+  Repository --> SQLite[(SQLite DB)]

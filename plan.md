@@ -13,7 +13,7 @@ The implementation will prioritize a complete, working flow over excessive featu
 - React with TypeScript, using Vite for fast setup and development.
 - React Router for the required screen navigation.
 - Redux Toolkit for state management, because the assignment explicitly asks for a state management tool and Redux Toolkit provides predictable global state with low boilerplate.
-- Custom CSS and small reusable components for the UI, keeping dependencies small while still providing a complete working interface.
+- Material UI for accessible, polished UI components and responsive layout primitives.
 - Native `fetch` for HTTP calls, because the app only needs a small number of simple requests.
 
 ### Backend
@@ -252,7 +252,7 @@ Given the suggested four-hour time limit, acceptable shortcuts:
 
 - No authentication.
 - Minimal backend API surface.
-- Basic but clean UI using custom CSS.
+- Polished UI using Material UI and a small custom theme.
 - Manual verification instead of broad automated tests if time is tight.
 - Simple SQLite persistence instead of a hosted database.
 - No cloud deployment unless core functionality is complete early.

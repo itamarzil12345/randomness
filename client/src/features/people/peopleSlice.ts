@@ -1,24 +1,32 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import {
   deleteSavedPersonApi,
-  fetchRandomPeopleApi,
+  fetchRandomPeoplePageApi,
   fetchSavedPeopleApi,
   savePersonApi,
   updateSavedPersonApi,
 } from "../../api/peopleApi";
+import { MAX_RANDOM_USERS, RANDOM_USER_PAGE_SIZE } from "../../constants";
 import type { Person, PersonName } from "../../types/person";
 
 type LoadingKey = "random" | "saved" | "mutation";
 
 type PeopleState = {
   randomPeople: Person[];
+  randomPage: number;
+  randomSeed: string;
   savedPeople: Person[];
   loading: Record<LoadingKey, boolean>;
   error: string | null;
 };
 
+const makeSeed = (): string =>
+  `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+
 const initialState: PeopleState = {
   randomPeople: [],
+  randomPage: 0,
+  randomSeed: "",
   savedPeople: [],
   loading: {
     random: false,
@@ -28,10 +36,32 @@ const initialState: PeopleState = {
   error: null,
 };
 
-export const fetchRandomPeople = createAsyncThunk(
-  "people/fetchRandom",
-  fetchRandomPeopleApi,
-);
+type RandomFetchResult = {
+  people: Person[];
+  page: number;
+  seed: string;
+  reset: boolean;
+};
+
+export const fetchRandomPeople = createAsyncThunk<
+  RandomFetchResult,
+  { append?: boolean } | undefined,
+  { state: { people: PeopleState } }
+>("people/fetchRandom", async (arg, { getState }) => {
+  const append = arg?.append ?? false;
+  const { randomPage, randomSeed, randomPeople } = getState().people;
+  const seed = append && randomSeed ? randomSeed : makeSeed();
+  const page = append ? randomPage + 1 : 1;
+  const remaining = append ? MAX_RANDOM_USERS - randomPeople.length : MAX_RANDOM_USERS;
+  const pageSize = Math.min(RANDOM_USER_PAGE_SIZE, Math.max(remaining, 0));
+
+  if (pageSize === 0) {
+    return { people: [], page: randomPage, seed: randomSeed, reset: false };
+  }
+
+  const people = await fetchRandomPeoplePageApi({ page, seed, pageSize });
+  return { people, page, seed, reset: !append };
+});
 
 export const fetchSavedPeople = createAsyncThunk(
   "people/fetchSaved",
@@ -92,7 +122,10 @@ const peopleSlice = createSlice({
       .addCase(fetchRandomPeople.pending, (state) => setPending(state, "random"))
       .addCase(fetchRandomPeople.fulfilled, (state, action) => {
         state.loading.random = false;
-        state.randomPeople = action.payload;
+        const { people, page, seed, reset } = action.payload;
+        state.randomSeed = seed;
+        state.randomPage = page;
+        state.randomPeople = reset ? people : [...state.randomPeople, ...people];
       })
       .addCase(fetchRandomPeople.rejected, (state) => setRejected(state, "random"))
       .addCase(fetchSavedPeople.pending, (state) => setPending(state, "saved"))

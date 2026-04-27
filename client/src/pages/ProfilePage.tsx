@@ -1,9 +1,12 @@
+import { Box, Paper, Stack } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { toast } from "react-toastify";
 import { useAppDispatch, useAppSelector } from "../app/hooks";
 import { Button } from "../components/Button";
 import { InfoGrid } from "../components/InfoGrid";
 import { PageShell } from "../components/PageShell";
+import { ProfileActions } from "../components/ProfileActions";
 import { ProfileForm } from "../components/ProfileForm";
 import { StatusMessage } from "../components/StatusMessage";
 import { AppRoute, PROFILE_ORIGIN_PARAM } from "../constants";
@@ -56,9 +59,11 @@ export const ProfilePage = (): JSX.Element => {
 
     return (
       <PageShell title="Profile not found">
-        <Button variant="secondary" onClick={() => navigate(AppRoute.home)}>
-          Back
-        </Button>
+        <Stack direction="row">
+          <Button variant="secondary" onClick={() => navigate(AppRoute.home)}>
+            Back
+          </Button>
+        </Stack>
       </PageShell>
     );
   }
@@ -68,74 +73,85 @@ export const ProfilePage = (): JSX.Element => {
   const backRoute = origin === "saved" ? AppRoute.savedPeople : AppRoute.randomPeople;
   const isAlreadySaved = savedPeople.some((savedPerson) => savedPerson.id === id);
   const canSave = !isSavedProfile && !isAlreadySaved;
+  const isDirty =
+    name.title !== person.name.title ||
+    name.first !== person.name.first ||
+    name.last !== person.name.last;
 
   const handleUpdate = async (): Promise<void> => {
+    if (!isDirty) {
+      return;
+    }
+
     if (isSavedProfile) {
       try {
         await dispatch(updateSavedPerson({ id, name })).unwrap();
+        toast.success("Profile updated on the server.");
       } catch {
-        return;
+        toast.error("Failed to update the profile. Please try again.");
       }
-
       return;
     }
 
     dispatch(updateRandomPersonName({ id, name }));
+    toast.success("Profile updated in the list.");
   };
 
   const handleSave = async (): Promise<void> => {
     try {
       await dispatch(savePerson({ ...person, name })).unwrap();
+      toast.success("Profile saved.");
     } catch {
-      return;
+      toast.error("Failed to save the profile. Please try again.");
     }
   };
 
   const handleDelete = async (): Promise<void> => {
     try {
       await dispatch(deleteSavedPerson(id)).unwrap();
+      toast.success("Profile deleted.");
       navigate(AppRoute.savedPeople);
     } catch {
-      return;
+      toast.error("Failed to delete the profile. Please try again.");
     }
   };
 
   return (
     <PageShell title={toFullName(name)} subtitle={person.email}>
-      <section className="profile-layout">
-        <img className="profile-image" src={person.picture.large} alt={toFullName(name)} />
-        <div className="profile-panel">
-          <ProfileForm name={name} onChange={setName} onSubmit={() => void handleUpdate()} />
-          <InfoGrid items={getProfileItems(person)} />
-          {error ? <StatusMessage message={error} tone="error" /> : null}
-          <div className="profile-actions">
-            {canSave ? (
-              <Button onClick={() => void handleSave()} disabled={loading.mutation}>
-                Save
-              </Button>
-            ) : null}
-            {isSavedProfile ? (
-              <Button
-                variant="danger"
-                onClick={() => void handleDelete()}
-                disabled={loading.mutation}
-              >
-                Delete
-              </Button>
-            ) : null}
-            <Button
-              variant="secondary"
-              onClick={() => void handleUpdate()}
-              disabled={loading.mutation}
-            >
-              Update
-            </Button>
-            <Button variant="secondary" onClick={() => navigate(backRoute)}>
-              Back
-            </Button>
-          </div>
-        </div>
-      </section>
+      <Box
+        component="section"
+        sx={{
+          display: "grid",
+          gap: 3,
+          gridTemplateColumns: { md: "280px 1fr", xs: "1fr" },
+        }}
+      >
+        <Paper sx={{ alignSelf: "start", overflow: "hidden" }}>
+          <Box
+            alt={toFullName(name)}
+            component="img"
+            src={person.picture.large}
+            sx={{ display: "block", width: "100%" }}
+          />
+        </Paper>
+        <Paper sx={{ p: 3 }}>
+          <Stack spacing={3}>
+            <ProfileForm name={name} onChange={setName} onSubmit={() => void handleUpdate()} />
+            <InfoGrid items={getProfileItems(person)} />
+            {error ? <StatusMessage message={error} tone="error" /> : null}
+            <ProfileActions
+              canSave={canSave}
+              canUpdate={isDirty}
+              isLoading={loading.mutation}
+              isSavedProfile={isSavedProfile}
+              onBack={() => navigate(backRoute)}
+              onDelete={() => void handleDelete()}
+              onSave={() => void handleSave()}
+              onUpdate={() => void handleUpdate()}
+            />
+          </Stack>
+        </Paper>
+      </Box>
     </PageShell>
   );
 };

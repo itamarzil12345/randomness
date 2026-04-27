@@ -1,12 +1,27 @@
-import { API_BASE_URL, RANDOM_USER_URL } from "../constants";
+import {
+  API_BASE_URL,
+  RANDOM_USER_API_URL,
+  RANDOM_USER_PAGE_SIZE,
+} from "../constants";
 import type { Person, PersonName, RandomUserResponse } from "../types/person";
 import { mapRandomUser } from "../utils/person";
 import { requestJson } from "./http";
 
 const peopleUrl = `${API_BASE_URL}/people`;
 
-export const fetchRandomPeopleApi = async (): Promise<Person[]> => {
-  const data = await requestJson<RandomUserResponse>(RANDOM_USER_URL);
+export type FetchRandomPeopleArgs = {
+  page: number;
+  seed: string;
+  pageSize?: number;
+};
+
+export const fetchRandomPeoplePageApi = async ({
+  page,
+  seed,
+  pageSize = RANDOM_USER_PAGE_SIZE,
+}: FetchRandomPeopleArgs): Promise<Person[]> => {
+  const url = `${RANDOM_USER_API_URL}?results=${pageSize}&page=${page}&seed=${encodeURIComponent(seed)}`;
+  const data = await requestJson<RandomUserResponse>(url);
   return data.results.map(mapRandomUser);
 };
 

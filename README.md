@@ -2,9 +2,12 @@
 
 Working React and Node application for browsing random profiles, saving them to a backend, and editing or deleting saved profiles.
 
+Additional architecture and implementation documentation is available in [docs](./docs/README.md).
+
 ## Tech Stack
 
 - React, TypeScript, and Vite for a fast strict frontend setup.
+- Material UI for polished, accessible frontend components and responsive layout primitives.
 - Redux Toolkit for predictable app-level state management with low boilerplate.
 - React Router for the required screen navigation.
 - Node, TypeScript, and Express for a minimal backend API.
@@ -74,5 +77,5 @@ The database file is created automatically by TypeORM when the backend first rea
 - No authentication, as requested.
 - Persistence uses a local SQLite file instead of a hosted database.
 - TypeORM `synchronize` is enabled for assignment simplicity; production should use migrations.
-- UI is custom CSS to keep dependencies small.
+- UI uses Material UI with a small custom theme.
 - Production follow-ups would include automated tests, stronger logging, Docker, CI, and duplicate-save handling rules.

@@ -1,6 +1,7 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import MuiButton, { type ButtonProps as MuiButtonProps } from "@mui/material/Button";
+import type { ReactNode } from "react";
 
-type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+type ButtonProps = Omit<MuiButtonProps, "variant" | "color"> & {
   variant?: "primary" | "secondary" | "danger";
   children: ReactNode;
 };
@@ -8,16 +9,14 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 export const Button = ({
   variant = "primary",
   children,
-  className = "",
   ...props
 }: ButtonProps): JSX.Element => {
-  const classes = ["button", `button-${variant}`, className]
-    .filter(Boolean)
-    .join(" ");
+  const color = variant === "danger" ? "error" : "primary";
+  const muiVariant = variant === "primary" ? "contained" : "outlined";
 
   return (
-    <button className={classes} {...props}>
+    <MuiButton color={color} variant={muiVariant} {...props}>
       {children}
-    </button>
+    </MuiButton>
   );
 };

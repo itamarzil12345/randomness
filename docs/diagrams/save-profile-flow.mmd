@@ -1,0 +1,18 @@
+sequenceDiagram
+  actor User
+  participant Client as React Client
+  participant Store as Redux Store
+  participant API as Express API
+  participant DB as SQLite via TypeORM
+
+  User->>Client: Click Fetch
+  Client->>Store: fetchRandomPeople
+  Store-->>Client: randomPeople
+  User->>Client: Open profile
+  User->>Client: Click Save
+  Client->>Store: savePerson
+  Store->>API: POST /api/people
+  API->>DB: repository.save
+  DB-->>API: saved profile
+  API-->>Store: saved profile
+  Store-->>Client: update savedPeople
