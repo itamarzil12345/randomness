@@ -1,0 +1,57 @@
+export type ProfileSourceType = "random" | "saved";
+
+export type PersonName = {
+  title: string;
+  first: string;
+  last: string;
+};
+
+export type PersonPicture = {
+  thumbnail: string;
+  large: string;
+};
+
+export type PersonLocation = {
+  country: string;
+  streetNumber: number;
+  streetName: string;
+  city: string;
+  state: string;
+};
+
+export type PersonDob = {
+  age: number;
+  date: string;
+};
+
+export type Person = {
+  id: string;
+  source: ProfileSourceType;
+  gender: string;
+  name: PersonName;
+  email: string;
+  phone: string;
+  picture: PersonPicture;
+  location: PersonLocation;
+  dob: PersonDob;
+};
+
+export type RandomUserResponse = {
+  results: RandomUser[];
+};
+
+export type RandomUser = {
+  gender: string;
+  name: PersonName;
+  email: string;
+  phone: string;
+  picture: PersonPicture;
+  login: { uuid: string };
+  location: {
+    country: string;
+    street: { number: number; name: string };
+    city: string;
+    state: string;
+  };
+  dob: PersonDob;
+};
