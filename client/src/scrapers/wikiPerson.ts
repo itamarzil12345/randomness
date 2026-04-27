@@ -1,5 +1,7 @@
 import type { Person } from "../types/person";
 
+export type ScraperId = "wikipedia" | "github" | "duckduckgo" | "google";
+
 export type WikipediaPart = {
   title: string;
   description: string | null;
@@ -33,12 +35,61 @@ export type DuckDuckGoHit = {
   abstractUrl: string | null;
 };
 
+export type GoogleHit = {
+  title: string;
+  link: string;
+  snippet: string;
+  displayLink: string;
+  thumbnail: string | null;
+};
+
 export type WikiPersonResult = {
   query: string;
   wikipedia: WikipediaPart | null;
   github: GitHubUser[];
   duckDuckGo: DuckDuckGoHit | null;
+  google: GoogleHit[] | null;
 };
+
+export type ScraperConfig = {
+  enabled: ScraperId[];
+  googleApiKey?: string;
+  googleCseId?: string;
+};
+
+export const SCRAPER_DEFINITIONS: Array<{
+  id: ScraperId;
+  label: string;
+  source: string;
+  description: string;
+  requiresKey?: boolean;
+}> = [
+  {
+    id: "wikipedia",
+    label: "Wikipedia + Wikidata",
+    source: "en.wikipedia.org",
+    description: "Top-hit summary, Wikidata claims (occupation, birth, nationality).",
+  },
+  {
+    id: "github",
+    label: "GitHub",
+    source: "api.github.com",
+    description: "User search with bio, location, repos, followers.",
+  },
+  {
+    id: "duckduckgo",
+    label: "DuckDuckGo",
+    source: "api.duckduckgo.com",
+    description: "Instant Answer abstract from the open web.",
+  },
+  {
+    id: "google",
+    label: "Google Custom Search",
+    source: "customsearch.googleapis.com",
+    description: "Programmable Search results. Requires API key + CSE ID.",
+    requiresKey: true,
+  },
+];
 
 type WikiOpenSearch = [string, string[], string[], string[]];
 
@@ -99,6 +150,19 @@ type DuckDuckGoResponse = {
   AbstractSource?: string;
   AbstractURL?: string;
   RelatedTopics?: Array<{ Text?: string; FirstURL?: string }>;
+};
+
+type GoogleResponse = {
+  items?: Array<{
+    title?: string;
+    link?: string;
+    snippet?: string;
+    displayLink?: string;
+    pagemap?: {
+      cse_thumbnail?: Array<{ src?: string }>;
+      cse_image?: Array<{ src?: string }>;
+    };
+  }>;
 };
 
 const fetchJson = async <T>(url: string): Promise<T | null> => {
@@ -309,28 +373,86 @@ const runDuckDuckGoPipeline = async (query: string): Promise<DuckDuckGoHit | nul
   };
 };
 
-export const runWikiPersonScraper = async (query: string): Promise<WikiPersonResult> => {
+const runGooglePipeline = async (
+  query: string,
+  apiKey: string,
+  cseId: string,
+): Promise<GoogleHit[]> => {
+  const trimmedKey = apiKey.trim();
+  const trimmedCse = cseId.trim();
+  if (!trimmedKey || !trimmedCse) {
+    throw new Error(
+      "Google scraper needs an API key and CSE ID. Configure them above to enable.",
+    );
+  }
+  const url = `https://www.googleapis.com/customsearch/v1?key=${encodeURIComponent(trimmedKey)}&cx=${encodeURIComponent(trimmedCse)}&q=${encodeURIComponent(query)}&num=5`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Google Custom Search failed (${response.status})`);
+  }
+  const data = (await response.json()) as GoogleResponse;
+  const items = data.items ?? [];
+  return items
+    .filter((item) => item.link && item.title)
+    .map((item) => ({
+      title: item.title ?? "",
+      link: item.link ?? "",
+      snippet: item.snippet ?? "",
+      displayLink: item.displayLink ?? "",
+      thumbnail:
+        item.pagemap?.cse_thumbnail?.[0]?.src ??
+        item.pagemap?.cse_image?.[0]?.src ??
+        null,
+    }));
+};
+
+export const runWikiPersonScraper = async (
+  query: string,
+  config: ScraperConfig,
+): Promise<WikiPersonResult> => {
   const trimmed = query.trim();
   if (trimmed.length === 0) {
     throw new Error("Query is empty.");
   }
+  const enabled = new Set(config.enabled);
+  if (enabled.size === 0) {
+    throw new Error("All scrapers are disabled. Enable at least one to search.");
+  }
 
-  const [wikipedia, github, duckDuckGo] = await Promise.all([
-    runWikipediaPipeline(trimmed).catch(() => null),
-    runGithubPipeline(trimmed).catch(() => [] as GitHubUser[]),
-    runDuckDuckGoPipeline(trimmed).catch(() => null),
+  const wikipediaPromise = enabled.has("wikipedia")
+    ? runWikipediaPipeline(trimmed).catch(() => null)
+    : Promise.resolve(null);
+  const githubPromise = enabled.has("github")
+    ? runGithubPipeline(trimmed).catch(() => [] as GitHubUser[])
+    : Promise.resolve([] as GitHubUser[]);
+  const duckPromise = enabled.has("duckduckgo")
+    ? runDuckDuckGoPipeline(trimmed).catch(() => null)
+    : Promise.resolve(null);
+  const googlePromise = enabled.has("google")
+    ? runGooglePipeline(trimmed, config.googleApiKey ?? "", config.googleCseId ?? "").catch(
+        () => null,
+      )
+    : Promise.resolve(null);
+
+  const [wikipedia, github, duckDuckGo, google] = await Promise.all([
+    wikipediaPromise,
+    githubPromise,
+    duckPromise,
+    googlePromise,
   ]);
 
   const hasAnyData =
-    wikipedia !== null || github.length > 0 || duckDuckGo !== null;
+    wikipedia !== null ||
+    github.length > 0 ||
+    duckDuckGo !== null ||
+    (google && google.length > 0);
 
   if (!hasAnyData) {
-    throw new Error(
-      "No public footprint detected on Wikipedia, GitHub, or DuckDuckGo for this query.",
-    );
+    const sources = Array.from(enabled).join(", ");
+    throw new Error(`No public footprint detected via ${sources} for this query.`);
   }
 
-  return { query: trimmed, wikipedia, github, duckDuckGo };
+  return { query: trimmed, wikipedia, github, duckDuckGo, google };
 };
 
 const computeAge = (parts: { year: number; month: number; day: number } | null): number => {
@@ -354,11 +476,13 @@ const fallbackPicture = (seed: string): string =>
 export const buildPersonFromWikiResult = (result: WikiPersonResult): Person => {
   const wiki = result.wikipedia;
   const headGithub = result.github[0] ?? null;
+  const headGoogle = result.google?.[0] ?? null;
 
   const fullTitle =
     wiki?.title ??
     headGithub?.name ??
     headGithub?.login ??
+    headGoogle?.title ??
     result.query;
   const parts = fullTitle.trim().split(/\s+/);
   const first = parts[0] ?? "Unknown";
@@ -367,6 +491,7 @@ export const buildPersonFromWikiResult = (result: WikiPersonResult): Person => {
   const picture =
     wiki?.thumbnail ??
     headGithub?.avatarUrl ??
+    headGoogle?.thumbnail ??
     fallbackPicture(fullTitle);
 
   const id =

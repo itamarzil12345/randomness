@@ -4,7 +4,6 @@ import { ZodError } from "zod";
 import {
   API_PREFIX,
   CHROME_DEVTOOLS_PATH,
-  CLIENT_URL,
   HttpStatus,
 } from "./constants.js";
 import { connectionRouter } from "./routes/connectionRoutes.js";
@@ -18,7 +17,16 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/", (_request, response) => {
-  response.redirect(CLIENT_URL);
+  response.status(HttpStatus.ok).json({
+    name: "People Intelligence Platform · API",
+    status: "ok",
+    endpoints: [
+      `${API_PREFIX}/health`,
+      `${API_PREFIX}/people`,
+      `${API_PREFIX}/connections`,
+      `${API_PREFIX}/settings`,
+    ],
+  });
 });
 
 app.get(CHROME_DEVTOOLS_PATH, (_request, response) => {

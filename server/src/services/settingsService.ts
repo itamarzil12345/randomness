@@ -2,6 +2,9 @@ import { settingRepository } from "../db/settingRepository.js";
 
 const DEFAULTS: Record<string, string> = {
   randomUserApiUrl: "https://randomuser.me/api/",
+  enabledScrapers: '["wikipedia","github","duckduckgo"]',
+  googleApiKey: "",
+  googleCseId: "",
 };
 
 export type Setting = {
