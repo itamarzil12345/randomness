@@ -1,7 +1,6 @@
 import type { Person } from "../types/person";
 
-export type WikiPersonResult = {
-  query: string;
+export type WikipediaPart = {
   title: string;
   description: string | null;
   extract: string | null;
@@ -15,6 +14,33 @@ export type WikiPersonResult = {
   gender: "male" | "female" | "other" | null;
   rawDob: { year: number; month: number; day: number } | null;
 };
+
+export type GitHubUser = {
+  login: string;
+  name: string | null;
+  avatarUrl: string;
+  htmlUrl: string;
+  bio: string | null;
+  location: string | null;
+  company: string | null;
+  publicRepos: number | null;
+  followers: number | null;
+};
+
+export type DuckDuckGoHit = {
+  abstract: string;
+  abstractSource: string | null;
+  abstractUrl: string | null;
+};
+
+export type WikiPersonResult = {
+  query: string;
+  wikipedia: WikipediaPart | null;
+  github: GitHubUser[];
+  duckDuckGo: DuckDuckGoHit | null;
+};
+
+type WikiOpenSearch = [string, string[], string[], string[]];
 
 type WikipediaSummary = {
   title: string;
@@ -46,45 +72,76 @@ type WbEntities = {
   entities?: Record<string, WikidataEntity & { labels?: Record<string, { value: string }> }>;
 };
 
-const fetchWikipediaSummary = async (query: string): Promise<WikipediaSummary | null> => {
-  const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(query)}`;
+type GitHubSearchItem = {
+  login: string;
+  avatar_url: string;
+  html_url: string;
+};
+
+type GitHubSearchResponse = {
+  items?: GitHubSearchItem[];
+};
+
+type GitHubUserResponse = {
+  login: string;
+  name: string | null;
+  avatar_url: string;
+  html_url: string;
+  bio: string | null;
+  location: string | null;
+  company: string | null;
+  public_repos: number | null;
+  followers: number | null;
+};
+
+type DuckDuckGoResponse = {
+  Abstract?: string;
+  AbstractSource?: string;
+  AbstractURL?: string;
+  RelatedTopics?: Array<{ Text?: string; FirstURL?: string }>;
+};
+
+const fetchJson = async <T>(url: string): Promise<T | null> => {
   try {
     const response = await fetch(url);
     if (!response.ok) return null;
-    return (await response.json()) as WikipediaSummary;
+    return (await response.json()) as T;
   } catch {
     return null;
   }
 };
 
+const fetchWikipediaTopHit = async (query: string): Promise<string | null> => {
+  const search = await fetchJson<WikiOpenSearch>(
+    `https://en.wikipedia.org/w/api.php?action=opensearch&search=${encodeURIComponent(query)}&limit=1&namespace=0&format=json&origin=*`,
+  );
+  if (!search || !search[1] || search[1].length === 0) return null;
+  return search[1][0];
+};
+
+const fetchWikipediaSummary = async (title: string): Promise<WikipediaSummary | null> =>
+  fetchJson<WikipediaSummary>(
+    `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`,
+  );
+
 const fetchWikidataEntity = async (qid: string): Promise<WikidataEntity | null> => {
-  const url = `https://www.wikidata.org/wiki/Special:EntityData/${qid}.json`;
-  try {
-    const response = await fetch(url);
-    if (!response.ok) return null;
-    const json = (await response.json()) as { entities?: Record<string, WikidataEntity> };
-    return json.entities?.[qid] ?? null;
-  } catch {
-    return null;
-  }
+  const json = await fetchJson<{ entities?: Record<string, WikidataEntity> }>(
+    `https://www.wikidata.org/wiki/Special:EntityData/${qid}.json`,
+  );
+  return json?.entities?.[qid] ?? null;
 };
 
 const fetchWikidataLabels = async (qids: string[]): Promise<Record<string, string>> => {
   if (qids.length === 0) return {};
-  const url = `https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&languages=en&props=labels&origin=*&ids=${qids.join("|")}`;
-  try {
-    const response = await fetch(url);
-    if (!response.ok) return {};
-    const json = (await response.json()) as WbEntities;
-    const out: Record<string, string> = {};
-    for (const [id, entity] of Object.entries(json.entities ?? {})) {
-      const label = entity.labels?.en?.value;
-      if (label) out[id] = label;
-    }
-    return out;
-  } catch {
-    return {};
+  const json = await fetchJson<WbEntities>(
+    `https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&languages=en&props=labels&origin=*&ids=${qids.join("|")}`,
+  );
+  const out: Record<string, string> = {};
+  for (const [id, entity] of Object.entries(json?.entities ?? {})) {
+    const label = entity.labels?.en?.value;
+    if (label) out[id] = label;
   }
+  return out;
 };
 
 const idsFromClaim = (entity: WikidataEntity, prop: string): string[] => {
@@ -129,23 +186,18 @@ const parseWikiTime = (raw: string | null): {
   return { iso, parts: { year, month: safeMonth, day: safeDay } };
 };
 
-export const runWikiPersonScraper = async (query: string): Promise<WikiPersonResult> => {
-  const trimmed = query.trim();
-  if (trimmed.length === 0) {
-    throw new Error("Query is empty.");
-  }
-
-  const summary = await fetchWikipediaSummary(trimmed);
-  if (!summary) {
-    throw new Error("No Wikipedia entry found for this query.");
-  }
+const runWikipediaPipeline = async (query: string): Promise<WikipediaPart | null> => {
+  const title = await fetchWikipediaTopHit(query);
+  if (!title) return null;
+  const summary = await fetchWikipediaSummary(title);
+  if (!summary || summary.type === "disambiguation") return null;
 
   const wikidataId = summary.wikibase_item ?? null;
   let occupationIds: string[] = [];
   let nationalityIds: string[] = [];
   let birthPlaceIds: string[] = [];
   let genderIds: string[] = [];
-  let rawDob: WikiPersonResult["rawDob"] = null;
+  let rawDob: WikipediaPart["rawDob"] = null;
   let birthDate: string | null = null;
 
   if (wikidataId) {
@@ -173,12 +225,11 @@ export const runWikiPersonScraper = async (query: string): Promise<WikiPersonRes
   const nationality = nationalityIds.slice(0, 2).map((id) => labels[id]).filter(Boolean);
   const birthPlace = birthPlaceIds[0] ? labels[birthPlaceIds[0]] ?? null : null;
   const genderLabel = genderIds[0] ? labels[genderIds[0]]?.toLowerCase() ?? null : null;
-  let gender: WikiPersonResult["gender"] = null;
+  let gender: WikipediaPart["gender"] = null;
   if (genderLabel === "male" || genderLabel === "female") gender = genderLabel;
   else if (genderLabel) gender = "other";
 
   return {
-    query: trimmed,
     title: summary.title,
     description: summary.description ?? null,
     extract: summary.extract ?? null,
@@ -192,6 +243,94 @@ export const runWikiPersonScraper = async (query: string): Promise<WikiPersonRes
     gender,
     rawDob,
   };
+};
+
+const runGithubPipeline = async (query: string): Promise<GitHubUser[]> => {
+  const search = await fetchJson<GitHubSearchResponse>(
+    `https://api.github.com/search/users?q=${encodeURIComponent(query)}+in:name+in:login&per_page=3`,
+  );
+  const items = search?.items ?? [];
+  if (items.length === 0) return [];
+
+  const top = items[0];
+  const detail = await fetchJson<GitHubUserResponse>(
+    `https://api.github.com/users/${encodeURIComponent(top.login)}`,
+  );
+  const headUser: GitHubUser = detail
+    ? {
+        login: detail.login,
+        name: detail.name,
+        avatarUrl: detail.avatar_url,
+        htmlUrl: detail.html_url,
+        bio: detail.bio,
+        location: detail.location,
+        company: detail.company,
+        publicRepos: detail.public_repos,
+        followers: detail.followers,
+      }
+    : {
+        login: top.login,
+        name: null,
+        avatarUrl: top.avatar_url,
+        htmlUrl: top.html_url,
+        bio: null,
+        location: null,
+        company: null,
+        publicRepos: null,
+        followers: null,
+      };
+
+  const tail: GitHubUser[] = items.slice(1).map((item) => ({
+    login: item.login,
+    name: null,
+    avatarUrl: item.avatar_url,
+    htmlUrl: item.html_url,
+    bio: null,
+    location: null,
+    company: null,
+    publicRepos: null,
+    followers: null,
+  }));
+
+  return [headUser, ...tail];
+};
+
+const runDuckDuckGoPipeline = async (query: string): Promise<DuckDuckGoHit | null> => {
+  const data = await fetchJson<DuckDuckGoResponse>(
+    `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&no_redirect=1`,
+  );
+  if (!data) return null;
+  const abstract = data.Abstract?.trim();
+  if (!abstract) return null;
+  return {
+    abstract,
+    abstractSource: data.AbstractSource ?? null,
+    abstractUrl: data.AbstractURL ?? null,
+  };
+};
+
+export const runWikiPersonScraper = async (query: string): Promise<WikiPersonResult> => {
+  const trimmed = query.trim();
+  if (trimmed.length === 0) {
+    throw new Error("Query is empty.");
+  }
+
+  const [wikipedia, github, duckDuckGo] = await Promise.all([
+    runWikipediaPipeline(trimmed).catch(() => null),
+    runGithubPipeline(trimmed).catch(() => [] as GitHubUser[]),
+    runDuckDuckGoPipeline(trimmed).catch(() => null),
+  ]);
+
+  const hasAnyData =
+    wikipedia !== null || github.length > 0 || duckDuckGo !== null;
+
+  if (!hasAnyData) {
+    throw new Error(
+      "No public footprint detected on Wikipedia, GitHub, or DuckDuckGo for this query.",
+    );
+  }
+
+  return { query: trimmed, wikipedia, github, duckDuckGo };
 };
 
 const computeAge = (parts: { year: number; month: number; day: number } | null): number => {
@@ -212,34 +351,53 @@ const slugify = (value: string): string =>
 const fallbackPicture = (seed: string): string =>
   `https://api.dicebear.com/9.x/personas/png?seed=${encodeURIComponent(seed)}`;
 
-export const buildPersonFromWikiResult = (
-  result: WikiPersonResult,
-): Person => {
-  const parts = result.title.trim().split(/\s+/);
+export const buildPersonFromWikiResult = (result: WikiPersonResult): Person => {
+  const wiki = result.wikipedia;
+  const headGithub = result.github[0] ?? null;
+
+  const fullTitle =
+    wiki?.title ??
+    headGithub?.name ??
+    headGithub?.login ??
+    result.query;
+  const parts = fullTitle.trim().split(/\s+/);
   const first = parts[0] ?? "Unknown";
   const last = parts.slice(1).join(" ") || "—";
-  const slug = slugify(result.title) || "subject";
+  const slug = slugify(fullTitle) || "subject";
   const picture =
-    result.thumbnail ?? fallbackPicture(result.title || "subject");
+    wiki?.thumbnail ??
+    headGithub?.avatarUrl ??
+    fallbackPicture(fullTitle);
+
+  const id =
+    wiki?.wikidataId ??
+    (headGithub ? `gh-${headGithub.login}` : null) ??
+    `wiki-${slug}`;
+
+  const country =
+    wiki?.nationality[0] ??
+    wiki?.birthPlace ??
+    headGithub?.location ??
+    "Unknown";
 
   return {
-    id: result.wikidataId ?? `wiki-${slug}`,
+    id,
     source: "saved",
-    gender: result.gender ?? "unknown",
+    gender: wiki?.gender ?? "unknown",
     name: { title: "—", first, last },
     email: `${slug}@scrawler.local`,
     phone: "—",
     picture: { thumbnail: picture, large: picture },
     location: {
-      country: result.nationality[0] ?? result.birthPlace ?? "Unknown",
+      country,
       streetNumber: 0,
       streetName: "—",
-      city: result.birthPlace ?? "—",
+      city: wiki?.birthPlace ?? headGithub?.location ?? "—",
       state: "—",
     },
     dob: {
-      age: computeAge(result.rawDob),
-      date: result.birthDate ?? new Date().toISOString().slice(0, 10),
+      age: computeAge(wiki?.rawDob ?? null),
+      date: wiki?.birthDate ?? new Date().toISOString().slice(0, 10),
     },
   };
 };
