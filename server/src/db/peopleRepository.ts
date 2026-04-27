@@ -1,66 +1,67 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import path from "node:path";
-import { DATA_DIRECTORY, PEOPLE_FILE } from "../constants.js";
 import type { Person, PersonName } from "../types/person.js";
+import { getDataSource } from "./dataSource.js";
+import type { StoredPerson } from "./peopleEntity.js";
 
-const dataPath = path.join(process.cwd(), DATA_DIRECTORY);
-const peoplePath = path.join(dataPath, PEOPLE_FILE);
+const entityName = "Person";
 
-const ensureStore = async (): Promise<void> => {
-  await mkdir(dataPath, { recursive: true });
+const serializePerson = (person: Person): StoredPerson => ({
+  id: person.id,
+  profileJson: JSON.stringify(person),
+  createdAt: new Date(),
+  updatedAt: new Date(),
+});
+
+const parsePerson = (storedPerson: StoredPerson): Person => {
+  return JSON.parse(storedPerson.profileJson) as Person;
 };
 
-const readPeople = async (): Promise<Person[]> => {
-  await ensureStore();
-
-  try {
-    const content = await readFile(peoplePath, "utf8");
-    return JSON.parse(content) as Person[];
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
-      return [];
-    }
-
-    throw error;
-  }
-};
-
-const writePeople = async (people: Person[]): Promise<void> => {
-  await ensureStore();
-  await writeFile(peoplePath, JSON.stringify(people, null, 2));
+const getRepository = async () => {
+  const dataSource = await getDataSource();
+  return dataSource.getRepository<StoredPerson>(entityName);
 };
 
 export const peopleRepository = {
   async list(): Promise<Person[]> {
-    return readPeople();
+    const repository = await getRepository();
+    const storedPeople = await repository.find();
+    return storedPeople.map(parsePerson);
   },
 
   async save(person: Person): Promise<Person> {
-    const people = await readPeople();
+    const repository = await getRepository();
     const savedPerson = { ...person, source: "saved" as const };
-    const withoutDuplicate = people.filter((item) => item.id !== person.id);
-    await writePeople([...withoutDuplicate, savedPerson]);
+    const existingPerson = await repository.findOneBy({ id: person.id });
+    const storedPerson = serializePerson(savedPerson);
+
+    await repository.save({
+      ...storedPerson,
+      createdAt: existingPerson?.createdAt ?? storedPerson.createdAt,
+    });
+
     return savedPerson;
   },
 
   async updateName(id: string, name: PersonName): Promise<Person | null> {
-    const people = await readPeople();
-    const index = people.findIndex((person) => person.id === id);
+    const repository = await getRepository();
+    const storedPerson = await repository.findOneBy({ id });
 
-    if (index === -1) {
+    if (!storedPerson) {
       return null;
     }
 
-    const updated = { ...people[index], name };
-    people[index] = updated;
-    await writePeople(people);
-    return updated;
+    const updatedPerson = { ...parsePerson(storedPerson), name };
+    await repository.save({
+      ...storedPerson,
+      profileJson: JSON.stringify(updatedPerson),
+      updatedAt: new Date(),
+    });
+
+    return updatedPerson;
   },
 
   async delete(id: string): Promise<boolean> {
-    const people = await readPeople();
-    const nextPeople = people.filter((person) => person.id !== id);
-    await writePeople(nextPeople);
-    return nextPeople.length !== people.length;
+    const repository = await getRepository();
+    const result = await repository.delete({ id });
+    return Boolean(result.affected);
   },
 };

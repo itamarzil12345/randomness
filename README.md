@@ -9,7 +9,8 @@ Working React and Node application for browsing random profiles, saving them to 
 - React Router for the required screen navigation.
 - Node, TypeScript, and Express for a minimal backend API.
 - Zod for request validation at the backend boundary.
-- JSON file persistence in `server/data/people.json`, chosen to keep the assignment easy to run without external database setup.
+- TypeORM as the backend ORM, so persistence code uses repositories instead of raw SQL.
+- SQLite persistence in `server/data/people.sqlite` through TypeORM's `sqljs` driver, chosen to satisfy the database requirement without native driver compilation.
 
 ## Prerequisites
 
@@ -58,9 +59,20 @@ npm run build
 - `PATCH /api/people/:id`
 - `DELETE /api/people/:id`
 
+## Persistence
+
+Saved profiles are stored in a local SQLite database:
+
+```text
+server/data/people.sqlite
+```
+
+The database file is created automatically by TypeORM when the backend first reads or writes saved profiles. If an old `server/data/people.json` file exists, the backend migrates those saved profiles into SQLite when the database is empty.
+
 ## Notes and Shortcuts
 
 - No authentication, as requested.
-- Persistence is file-based instead of a hosted database.
+- Persistence uses a local SQLite file instead of a hosted database.
+- TypeORM `synchronize` is enabled for assignment simplicity; production should use migrations.
 - UI is custom CSS to keep dependencies small.
 - Production follow-ups would include automated tests, stronger logging, Docker, CI, and duplicate-save handling rules.

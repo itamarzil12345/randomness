@@ -13,16 +13,17 @@ The implementation will prioritize a complete, working flow over excessive featu
 - React with TypeScript, using Vite for fast setup and development.
 - React Router for the required screen navigation.
 - Redux Toolkit for state management, because the assignment explicitly asks for a state management tool and Redux Toolkit provides predictable global state with low boilerplate.
-- Material UI for UI components, because no design is provided and it gives accessible, production-grade inputs, buttons, tables/lists, and layout primitives quickly.
-- Axios or native `fetch` for HTTP calls. Prefer native `fetch` unless Axios becomes useful for shared interceptors or typed API helpers.
+- Custom CSS and small reusable components for the UI, keeping dependencies small while still providing a complete working interface.
+- Native `fetch` for HTTP calls, because the app only needs a small number of simple requests.
 
 ### Backend
 
 - Node.js with TypeScript.
 - Express for the HTTP API, because the assignment asks for a minimal backend and Express keeps the API simple.
-- SQLite as the persistent database, using Prisma or better-sqlite3.
-- Prefer Prisma if time allows, because it gives typed DB access and migrations; otherwise use better-sqlite3 for a smaller setup.
-- Zod for validating request bodies at the API boundary if time allows.
+- SQLite as the persistent database, stored at `server/data/people.sqlite`.
+- TypeORM as the ORM layer, because it keeps persistence code repository-based and avoids handwritten SQL.
+- TypeORM's `sqljs` driver for SQLite access, because it avoids native driver compilation and keeps installation reliable for a take-home assignment.
+- Zod for validating request bodies at the API boundary.
 
 ## Repository Structure
 
@@ -84,7 +85,16 @@ type Person = {
 };
 ```
 
-For unsaved Random User profiles, use `login.uuid` as the id. For saved DB profiles, use the database id or preserve the original uuid as a stable id.
+For unsaved Random User profiles, use `login.uuid` as the id. Saved DB profiles preserve the original uuid as a stable id.
+
+Saved profiles are stored in a SQLite `people` table with:
+
+- `id`: stable profile id.
+- `profile_json`: serialized normalized profile.
+- `created_at`: creation timestamp.
+- `updated_at`: last update timestamp.
+
+The serialized profile keeps the backend implementation small while still using SQLite through an ORM repository.
 
 ## Backend API
 
@@ -242,7 +252,7 @@ Given the suggested four-hour time limit, acceptable shortcuts:
 
 - No authentication.
 - Minimal backend API surface.
-- Basic but clean UI using Material UI.
+- Basic but clean UI using custom CSS.
 - Manual verification instead of broad automated tests if time is tight.
 - Simple SQLite persistence instead of a hosted database.
 - No cloud deployment unless core functionality is complete early.

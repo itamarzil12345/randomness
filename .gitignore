@@ -3,5 +3,6 @@ dist/
 client/dist/
 server/dist/
 server/data/
+*.tsbuildinfo
 .env
 .DS_Store
